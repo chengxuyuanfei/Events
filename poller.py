@@ -3,6 +3,7 @@ from enum import Enum
 import time
 import select
 
+
 class PollerMask(Enum):
     POLLERREAD = 0
     POLLERWRITE = 1
@@ -19,10 +20,10 @@ class Poller(object):       # factory
 
     def register(self, fd, mask):
         # print 'register:', fd, mask
-        return self.poller.register(fd, mask)
+        self.poller.register(fd, mask)
 
     def modify(self, fd, mask):
-        return self.poller.modify(fd, mask)
+        self.poller.modify(fd, mask)
 
     def unregister(self, fd):
         self.poller.unregister(fd)
@@ -81,7 +82,7 @@ class EpollPoller(object):
         self.fileno_sock = dict()
         self.sock_fileno = dict()
 
-    @profile
+    # @profile
     def __map_mask(self, mask):
         if mask is PollerMask.POLLERREAD:
             return select.EPOLLIN
@@ -90,7 +91,7 @@ class EpollPoller(object):
         elif mask is PollerMask.POLLERERROR:
             return select.EPOLLERR
 
-    @profile
+    # @profile
     def __reverse_map_mask(self, mask):
         if mask is select.EPOLLIN:
             return PollerMask.POLLERREAD
@@ -99,7 +100,7 @@ class EpollPoller(object):
         elif mask is select.EPOLLERR:
             return PollerMask.POLLERERROR
 
-    @profile
+    # @profile
     def register(self, fd, mask):
         if self.sock_fileno.has_key(fd):
             self.poller.modify(self.sock_fileno[fd], self.__map_mask(mask))       # 传递fileno而不是fd,可以减少fileno（）操作的时间，fileno（）是一个耗时操作
@@ -109,17 +110,17 @@ class EpollPoller(object):
             self.sock_fileno[fd] = fileno
             self.poller.register(fileno, self.__map_mask(mask))
 
-    @profile
+    # @profile
     def modify(self, fd, mask):
         self.poller.modify(self.sock_fileno[fd], self.__map_mask(mask))
 
-    @profile
+    # @profile
     def unregister(self, fd):
         del self.fileno_sock[self.sock_fileno[fd]]          # 必须删除记录，否则会出现socket未注册却被检测为已经注册的状况
         self.poller.unregister(self.sock_fileno[fd])
         del self.sock_fileno[fd]                            # 必须删除记录，否则会出现socket未注册却被检测为已经注册的状况
 
-    @profile
+    # @profile
     def poll(self, timeout):
         events = self.poller.poll(timeout)
         results = set()

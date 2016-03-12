@@ -10,7 +10,7 @@ class Events(object):
         self.time_events = TimeEvents()
         self.time_id_generator = IDGenerator()
 
-    @profile
+    # @profile
     def add_file_event(self, fd, mask, file_proc, client_data = None):
         self.poller.register(fd, mask)
         self.file_events.put(self, fd, mask, file_proc, client_data)
