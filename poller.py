@@ -52,6 +52,8 @@ class SelectPoller(object):
     def poll(self, timeout):
         inputs = []
         outputs = []
+        # inputs.append(fd for fd, mask in self.fds if mask is PollerMask.POLLERREAD)
+        # outputs.append(fd for fd, mask in self.fds if mask is PollerMask.POLLERWRITE)
         for elem in self.fds:
             if elem[1] is PollerMask.POLLERREAD:
                 inputs.append(elem[0])
@@ -61,22 +63,25 @@ class SelectPoller(object):
                 pass
         reads, writes, errors = select.select(inputs, outputs, inputs, timeout)
         results = set()
-        for read in reads:
-            results.add((read, PollerMask.POLLERREAD))
-        for write in writes:
-            results.add((write, PollerMask.POLLERWRITE))
-        for error in errors:
-            results.add((error, PollerMask.POLLERERROR))
+        results.add(((read, PollerMask.POLLERREAD) for read in reads))
+        results.add(((write, PollerMask.POLLERWRITE) for write in writes))
+        results.add(((error, PollerMask.POLLERERROR) for error in errors))
+        # for read in reads:
+        #     results.add((read, PollerMask.POLLERREAD))
+        # for write in writes:
+        #     results.add((write, PollerMask.POLLERWRITE))
+        # for error in errors:
+        #     results.add((error, PollerMask.POLLERERROR))
         return results
-
-
 
 
 class EpollPoller(object):
     def __init__(self):
         self.poller = select.epoll()
         self.fileno_sock = dict()
+        self.sock_fileno = dict()
 
+    @profile
     def __map_mask(self, mask):
         if mask is PollerMask.POLLERREAD:
             return select.EPOLLIN
@@ -85,23 +90,41 @@ class EpollPoller(object):
         elif mask is PollerMask.POLLERERROR:
             return select.EPOLLERR
 
+    @profile
+    def __reverse_map_mask(self, mask):
+        if mask is select.EPOLLIN:
+            return PollerMask.POLLERREAD
+        elif mask is select.EPOLLOUT:
+            return PollerMask.POLLERWRITE
+        elif mask is select.EPOLLERR:
+            return PollerMask.POLLERERROR
+
+    @profile
     def register(self, fd, mask):
-        if self.fileno_sock.has_key(fd.fileno()):
-            self.modify(fd, mask)
+        if self.sock_fileno.has_key(fd):
+            self.poller.modify(self.sock_fileno[fd], self.__map_mask(mask))       # 传递fileno而不是fd,可以减少fileno（）操作的时间，fileno（）是一个耗时操作
         else:
-            self.fileno_sock[fd.fileno()] = fd
-            self.poller.register(fd.fileno(), self.__map_mask(mask))
+            fileno = fd.fileno()
+            self.fileno_sock[fileno] = fd
+            self.sock_fileno[fd] = fileno
+            self.poller.register(fileno, self.__map_mask(mask))
 
+    @profile
     def modify(self, fd, mask):
-        self.poller.modify(fd.fileno(), self.__map_mask(mask))
+        self.poller.modify(self.sock_fileno[fd], self.__map_mask(mask))
 
+    @profile
     def unregister(self, fd):
-        del self.fileno_sock[fd.fileno()]       # 必须删除记录，否则会出现socket未注册却被检测为已经注册的状况
-        self.poller.unregister(fd.fileno())
+        del self.fileno_sock[self.sock_fileno[fd]]          # 必须删除记录，否则会出现socket未注册却被检测为已经注册的状况
+        self.poller.unregister(self.sock_fileno[fd])
+        del self.sock_fileno[fd]                            # 必须删除记录，否则会出现socket未注册却被检测为已经注册的状况
 
+    @profile
     def poll(self, timeout):
         events = self.poller.poll(timeout)
         results = set()
+        # print (self.fileno_sock[event[0]] for event in events)
+        # results.add()
         for fd, mask in events:
             if mask & select.EPOLLIN:
                 results.add((self.fileno_sock[fd], PollerMask.POLLERREAD))

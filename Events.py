@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 from poller import *
 from timer import *
-from Queue import Queue
 
 class Events(object):
     def __init__(self):
         self.poller = Poller()
         self.timer = Timer()
-        self.file_proc = dict()
         self.file_events = FileEvents()
         self.time_events = TimeEvents()
         self.time_id_generator = IDGenerator()
 
+    @profile
     def add_file_event(self, fd, mask, file_proc, client_data = None):
         self.poller.register(fd, mask)
-        self.file_proc[(fd, mask)] = file_proc
         self.file_events.put(self, fd, mask, file_proc, client_data)
 
     def remove_file_event(self, fd):
@@ -29,6 +27,7 @@ class Events(object):
     def __process_event(self):
         pass
 
+    # @profile
     def run(self):
         # process time event
         while 1:
@@ -39,6 +38,7 @@ class Events(object):
             # print self.timer.latest_timespan_value, self.timer.latest_timespan()
             file_events = self.poller.poll(self.timer.latest_timespan())
             # print "file events", file_events, len(file_events)
+            # file_events = self.poller.poll(0)
             for fd, mask in file_events:
                 self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
 

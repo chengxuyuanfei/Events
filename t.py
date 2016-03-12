@@ -35,7 +35,11 @@ print d
 d[1][2] = 2
 print d
 s = set()
-s.add(1)
+s.add((1, 2, 3))
+s.add((1, 2, 5))
+s.add((7, 8, 9))
+print s
+
 
 
 

@@ -16,7 +16,7 @@ try:
         if total.has_key('complete') and total['complete'] % 1000 is 0:
             print total
         events = epoll.poll(1)
-        print 'events count:', len(events)
+        # print 'events count:', len(events)
         for fileno, event in events:
             if fileno == serversocket.fileno():
                 connection, address = serversocket.accept()
