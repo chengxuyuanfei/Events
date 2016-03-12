@@ -10,8 +10,6 @@ class Events(object):
         self.file_proc = dict()
         self.file_events = FileEvents()
         self.time_events = TimeEvents()
-        self.file_scheduler = FileSchecduler()
-        self.time_scheduler = TimeSchecduler()
         self.time_id_generator = IDGenerator()
 
     def add_file_event(self, fd, mask, file_proc, client_data = None):
@@ -37,14 +35,13 @@ class Events(object):
             time_events = self.timer.poll()
             # print "time events", time_events
             for id in time_events:
-                self.time_scheduler.add_event(self.time_events.get(id))
-            self.time_scheduler.process_event()
+                self.time_events.get(id).time_proc(self.time_events.get(id))
             # print self.timer.latest_timespan_value, self.timer.latest_timespan()
             file_events = self.poller.poll(self.timer.latest_timespan())
             # print "file events", file_events, len(file_events)
             for fd, mask in file_events:
-                self.file_scheduler.add_event(self.file_events.get(fd, mask))
-            self.file_scheduler.process_event()
+                self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
+
 
 # FileEvents独立为一个类，保证可扩展
 class FileEvents(object):
@@ -91,44 +88,6 @@ class TimeEvent(object):
         self.client_data = client_data
 
 
-def process_file_event(event_queue):     # 默认单线程，未考虑并发执行的资源竞争问题
-    while not event_queue.empty():
-        event = event_queue.get()
-        event.proc(event)
-
-
-class FileSchecduler(object):
-    def __init__(self):
-        self.event_queue = Queue()
-        self.__proc_event = process_file_event
-
-    def add_event(self, file_event):
-        self.event_queue.put(file_event)
-
-    def set_process_event(self, process_event):
-        self.__proc_event = process_event
-
-    def process_event(self):
-        self.__proc_event(self.event_queue)
-
-def process_time_event(event_queue):
-    while not event_queue.empty():
-        event = event_queue.get()
-        event.time_proc(event)
-
-class TimeSchecduler(object):
-    def __init__(self):
-        self.event_queue = Queue()
-        self.__proc_event = process_time_event
-
-    def add_event(self, time_event):
-        self.event_queue.put(time_event)
-
-    def set_process_event(self, process_event):
-        self.__proc_event = process_event
-
-    def process_event(self):
-        self.__proc_event(self.event_queue)
 
 class EventFactory(object):
     pass
