@@ -106,6 +106,7 @@ class EpollPoller(object):
             self.poller.modify(self.sock_fileno[fd], self.__map_mask(mask))       # 传递fileno而不是fd,可以减少fileno（）操作的时间，fileno（）是一个耗时操作
         else:
             fileno = fd.fileno()
+            # print 'fd:', fd, "fileno:", fileno
             self.fileno_sock[fileno] = fd
             self.sock_fileno[fd] = fileno
             self.poller.register(fileno, self.__map_mask(mask))
