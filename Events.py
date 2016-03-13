@@ -10,7 +10,8 @@ class Events(object):
         self.file_events = FileEvents()
         self.time_events = TimeEvents()
         self.time_id_generator = IDGenerator()
-        self.thread_pool = ThreadPool(5)
+        self.thread_pool = ThreadPool(10)
+        self.times = 0
 
 
     # @profile
@@ -42,8 +43,14 @@ class Events(object):
             file_events = self.poller.poll(self.timer.latest_timespan())
             # print "file events", file_events, len(file_events)
             # file_events = self.poller.poll(0)
-            map_args = (self.file_events.get(fd, mask) for fd, mask in file_events)
-            self.thread_pool.map(self.scheduler, map_args)
+            self.times = self.times + 1
+            if self.times % 2 is not 0:
+                time.sleep(0.01)
+                # print "file events :", len(file_events)
+            else:
+                # print "file events :", len(file_events)
+                map_args = (self.file_events.get(fd, mask) for fd, mask in file_events)
+                self.thread_pool.map(self.scheduler, map_args)
             # for fd, mask in file_events:
             #     self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
 
