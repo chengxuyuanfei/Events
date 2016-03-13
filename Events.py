@@ -9,6 +9,7 @@ class Events(object):
         self.file_events = FileEvents()
         self.time_events = TimeEvents()
         self.time_id_generator = IDGenerator()
+        self.times = 0
 
     # @profile
     def add_file_event(self, fd, mask, file_proc, client_data = None):
@@ -39,7 +40,7 @@ class Events(object):
             file_events = self.poller.poll(self.timer.latest_timespan())
             # print "file events", file_events, len(file_events)
             # file_events = self.poller.poll(0)
-            for fd, mask in file_events:
+            for fd, mask in file_events:    # poll出的数据如果不立刻处理，会马上又被poll出来，并不会积累到一定数量再poll
                 self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
 
 
