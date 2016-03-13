@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from poller import *
 from timer import *
+from multiprocessing.dummy import Pool as ThreadPool
 
 class Events(object):
     def __init__(self):
@@ -9,6 +10,8 @@ class Events(object):
         self.file_events = FileEvents()
         self.time_events = TimeEvents()
         self.time_id_generator = IDGenerator()
+        self.thread_pool = ThreadPool(5)
+
 
     # @profile
     def add_file_event(self, fd, mask, file_proc, client_data = None):
@@ -39,8 +42,13 @@ class Events(object):
             file_events = self.poller.poll(self.timer.latest_timespan())
             # print "file events", file_events, len(file_events)
             # file_events = self.poller.poll(0)
-            for fd, mask in file_events:
-                self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
+            map_args = (self.file_events.get(fd, mask) for fd, mask in file_events)
+            self.thread_pool.map(self.scheduler, map_args)
+            # for fd, mask in file_events:
+            #     self.file_events.get(fd, mask).proc(self.file_events.get(fd, mask))
+
+    def scheduler(self, event):
+        event.proc(event)
 
 
 # FileEvents独立为一个类，保证可扩展
