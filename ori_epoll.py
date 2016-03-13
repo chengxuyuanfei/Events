@@ -6,7 +6,7 @@ def test():
     total = dict()
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serversocket.bind(('0.0.0.0', 5354))
+    serversocket.bind(('0.0.0.0', 5355))
     serversocket.listen(5)
     serversocket.setblocking(0)
 
@@ -16,7 +16,7 @@ def test():
     try:
         connections = {}; requests = {}; responses = {}
         while True:
-            if total.has_key('complete') and total['complete'] % 1000 is 0:
+            if total.has_key('complete') and total['complete'] % 4000 is 0:
                 print total
             events = epoll.poll(1)
             # print 'events count:', len(events)
