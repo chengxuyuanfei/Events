@@ -4,25 +4,6 @@ import socket
 
 total = dict()
 
-def file_process(event):
-    print "exec file process"
-    con, add = server_socket.accept()
-    # con.setblocking(0)
-    buf = con.recv(1024)
-    con.close()
-    import time
-    print '*****', buf, time.time()
-
-
-# class FileEvent(object):
-#     def __init__(self, events, fd, mask, proc, client_data):
-#         self.events = events
-#         self.fd = fd
-#         self.mask = mask
-#         self.proc = proc
-#         self.client_data = client_data
-
-# def add_file_event(self, fd, mask, file_proc, client_data = None):
 
 def request_response_process(event):
     if event.mask is PollerMask.POLLERREAD:
@@ -40,8 +21,8 @@ def request_response_read_proc(event):
     if event.fd is server_socket:
         client_sock, client_addr = server_socket.accept()
         client_sock.setblocking(0)
-        client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        # client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_CORK, 0)
+        client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)       # 取消Nagle算法，保证尽快交付，经过测试，能够提升并发数量
+        # client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_CORK, 0)        # 设置小包延迟发送，等待可以组装成大包后再发送，理论上能够提高网络传输效率，但是在本应用场景的实测中，没有提升效果，反而有降低并发数量的现象
         event.events.add_file_event(client_sock, PollerMask.POLLERREAD, request_response_read_proc)
         if not total.has_key("start time"):
             total['start time'] = time.time()
@@ -99,18 +80,3 @@ event_loop.add_time_event(3, TimerMask.TIMERPERIOD, time_process)
 #     event_loop.add_time_event(x, TimerMask.TIMERPERIOD, time_process)
 event_loop.run()
 
-
-# poller = Poller()
-# poller.register(server_socket.fileno(), PollerMask.POLLERREAD)
-# while 1:
-#     events = poller.poll(2)
-#     for fd, flag in events:
-#         print fd, flag
-#         if fd is server_socket.fileno():
-#             con, add = server_socket.accept()
-#             # con.setblocking(0)
-#             buf = con.recv(1024)
-#             con.close()
-#             print buf
-#     import time
-#     print time.time()

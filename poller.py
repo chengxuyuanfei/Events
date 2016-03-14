@@ -1,25 +1,30 @@
 # -*- coding: utf-8 -*-
-from enum import Enum
 import time
 import select
 
+try:
+    from enum import Enum       # 默认使用Python带有的枚举，更加安全，在2.7下，需要pip install enum34，3.4之上默认带有enum
+    class PollerMask(Enum):
+        POLLERREAD = 0
+        POLLERWRITE = 1
+        POLLERERROR = 2
+except ImportError as e:
+    class PollerMask():         # 如果当前环境缺少enum，则使用class简单模拟枚举，也可以达到目的，但不够安全
+        POLLERREAD = 0
+        POLLERWRITE = 1
+        POLLERERROR = 2
 
-class PollerMask(Enum):
-    POLLERREAD = 0
-    POLLERWRITE = 1
-    POLLERERROR = 2
 
 class Poller(object):       # factory
     def __init__(self):
         try:
-            # raise ImportError
-            from select import epoll
+            # raise ImportError     # 测试select时使用
+            from select import epoll    # 默认使用Epoll，因为Epoll比select有更好的性能表现
             self.poller = EpollPoller()
         except ImportError as e:
             self.poller = SelectPoller()
 
     def register(self, fd, mask):
-        # print 'register:', fd, mask
         self.poller.register(fd, mask)
 
     def modify(self, fd, mask):
@@ -33,7 +38,7 @@ class Poller(object):       # factory
 
 class SelectPoller(object):
     def __init__(self):
-        self.fds = set()
+        self.fds = set()        # 保存信息，（fd,mask）
 
     def register(self, fd, mask):
         self.fds.add((fd, mask))
@@ -53,8 +58,6 @@ class SelectPoller(object):
     def poll(self, timeout):
         inputs = []
         outputs = []
-        # inputs.append(fd for fd, mask in self.fds if mask is PollerMask.POLLERREAD)
-        # outputs.append(fd for fd, mask in self.fds if mask is PollerMask.POLLERWRITE)
         for elem in self.fds:
             if elem[1] is PollerMask.POLLERREAD:
                 inputs.append(elem[0])
@@ -64,15 +67,16 @@ class SelectPoller(object):
                 pass
         reads, writes, errors = select.select(inputs, outputs, inputs, timeout)
         results = set()
-        results.add(((read, PollerMask.POLLERREAD) for read in reads))
-        results.add(((write, PollerMask.POLLERWRITE) for write in writes))
-        results.add(((error, PollerMask.POLLERERROR) for error in errors))
-        # for read in reads:
-        #     results.add((read, PollerMask.POLLERREAD))
-        # for write in writes:
-        #     results.add((write, PollerMask.POLLERWRITE))
-        # for error in errors:
-        #     results.add((error, PollerMask.POLLERERROR))
+        # 错误使用，在这里不能这样使用生成器来添加元素
+        # results.add(((read, PollerMask.POLLERREAD) for read in reads))
+        # results.add(((write, PollerMask.POLLERWRITE) for write in writes))
+        # results.add(((error, PollerMask.POLLERERROR) for error in errors))
+        for read in reads:
+            results.add((read, PollerMask.POLLERREAD))
+        for write in writes:
+            results.add((write, PollerMask.POLLERWRITE))
+        for error in errors:
+            results.add((error, PollerMask.POLLERERROR))
         return results
 
 
@@ -124,8 +128,6 @@ class EpollPoller(object):
     def poll(self, timeout):
         events = self.poller.poll(timeout)
         results = set()
-        # print (self.fileno_sock[event[0]] for event in events)
-        # results.add()
         for fd, mask in events:
             if mask & select.EPOLLIN:
                 results.add((self.fileno_sock[fd], PollerMask.POLLERREAD))

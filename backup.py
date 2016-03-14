@@ -1,13 +1,11 @@
 from enum import Enum
 
-class PollerType(Enum):
-    SELECT = 0
-    EPOLL = 1
-
 class PollerMask(Enum):
     POLLERREAD = 0
     POLLERWRITE = 1
     POLLERERROR = 2
+
+
 
 class Poller(object):
     def __init__(self):

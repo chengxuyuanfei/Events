@@ -2,14 +2,14 @@
 from poller import *
 from timer import *
 
+
 class Events(object):
     def __init__(self):
-        self.poller = Poller()
-        self.timer = Timer()
-        self.file_events = FileEvents()
-        self.time_events = TimeEvents()
-        self.time_id_generator = IDGenerator()
-        self.times = 0
+        self.poller = Poller()      # 文件事件处理器
+        self.timer = Timer()        # 时间事件处理器
+        self.file_events = FileEvents()     # 通过dict保存每个文件事件的各种信息，便于文件事件执行时获取各种信息
+        self.time_events = TimeEvents()     # 通过dict保存每个文件事件的各种信息，便于文件事件执行时获取各种信息
+        self.time_id_generator = IDGenerator()  # ID生成器，该ID用于标示时间时间，一个ID对应当前的一个时间事件
 
     # @profile
     def add_file_event(self, fd, mask, file_proc, client_data = None):
@@ -25,8 +25,6 @@ class Events(object):
         self.time_events.put(self, event_id, mask, sec, time_proc, client_data)
         self.timer.register(event_id, sec, mask)
 
-    def __process_event(self):
-        pass
 
     # @profile
     def run(self):
@@ -58,6 +56,7 @@ class FileEvents(object):
     def get(self, fd, mask):
         return self.events[(fd, mask)]
 
+# 作为dict的value，保存文件事件执行时需要的各种信息
 class FileEvent(object):
     def __init__(self, events, fd, mask, proc, client_data):
         self.events = events
@@ -79,6 +78,7 @@ class TimeEvents(object):
     def get(self, event_id):
         return self.events[event_id]
 
+# 作为dict的value，保存时间事件执行时需要的各种信息
 class TimeEvent(object):
     def __init__(self, events, event_id, mask, sec, time_proc, client_data):
         self.events = events
@@ -89,10 +89,10 @@ class TimeEvent(object):
         self.client_data = client_data
 
 
-
-class EventFactory(object):
-    pass
-
+# ID生成器
+# 1，生成器生成的ID始终在floor&ceiling之间，包括边界
+# 2，循环使用ID
+# 3，在时间事件中，数量并不多，故而默认仅有257个ID
 class IDGenerator(object):
     def __init__(self, floor = 0, ceiling = 256):
         self.free = list()
