@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import time
-from enum import Enum
-
-class TimerMask(Enum):
-    TIMERAPPOINTMENT = 0
-    TIMERPERIOD = 1
-
+try:
+    from enum import Enum
+    class TimerMask(Enum):
+        TIMERAPPOINTMENT = 0
+        TIMERPERIOD = 1
+except ImportError as e:
+    class TimerMask():
+        TIMERAPPOINTMENT = 0
+        TIMERPERIOD = 1
 
 class Timer(object):
     def __init__(self):
